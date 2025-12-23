@@ -1,7 +1,6 @@
-const http = require('http');
 const fs = require('fs');
 
-function requestListener(req, res) {
+const requestHandler = (req, res) => {
     console.log(req.url, req.method, req.headers);
     if (req.url === '/') {
         res.setHeader('Content-Type', 'text/html');
@@ -21,9 +20,28 @@ function requestListener(req, res) {
         return res.end();
     }
     else if (req.url.toLowerCase() === '/submit-details' && req.method == "POST") {
-        fs.writeFileSync('user.txt','Writing File');
+        const body = [];
+        // reading chunks with buffer
+        req.on('data', (chunk) => {
+            console.log(chunk);
+            body.push(chunk);
+        });
+        // buffer to readable string
+        req.on('end', () => {
+            const fullBody = Buffer.concat(body).toString();
+            console.log(fullBody);
+            const params = new URLSearchParams(fullBody);
+            // const jsonObject = {};
+            // for (const [key,val] of params.entries()) {
+            //     jsonObject[key] = val;
+            // }
+            const jsonObject = Object.fromEntries(params);
+            console.log(jsonObject);
+            fs.appendFileSync("user.txt", JSON.stringify(jsonObject));
+            console.log("File written successfully!");
+        });
         res.statusCode = 302;
-        res.setHeader('Location','/');
+        res.setHeader('Location', '/');
     }
     else {
         res.setHeader('Content-Type', 'text/html');
@@ -33,8 +51,6 @@ function requestListener(req, res) {
         res.write('</html>');
         return res.end();
     }
-    
 }
 
-const server = http.createServer(requestListener);
-server.listen(3000);
+module.exports = requestHandler;
